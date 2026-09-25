@@ -12,21 +12,25 @@ export const networkService = {
   },
 
   /**
-   * Subscribes to online/offline events.
-   * Returns a cleanup function.
+   * Verifies actual internet reachability against the backend.
+   *
+   * The browser's `online` event only means a network interface became
+   * active (e.g. joining a WiFi network with no real internet access) —
+   * it does not guarantee reachability. This performs a real request so
+   * callers can confirm a reconnect before trusting it.
    */
-  subscribe: (callback: (isOnline: boolean) => void) => {
-    if (typeof window === 'undefined') return () => {};
+  checkConnectivity: async (signal?: AbortSignal): Promise<boolean> => {
+    if (typeof window === 'undefined') return true;
 
-    const handleOnline = () => callback(true);
-    const handleOffline = () => callback(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    try {
+      const response = await fetch('/api/system/heartbeat', {
+        method: 'GET',
+        cache: 'no-store',
+        signal,
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   },
 };

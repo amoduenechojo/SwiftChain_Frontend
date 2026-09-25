@@ -1,5 +1,5 @@
 import './global.css';
-import OfflineBanner from '@/components/wallet/ui/OfflineBanner';
+import OfflineBanner from '@/components/ui/OfflineBanner';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Providers } from './providers';
 import { NotificationProvider } from '@/context/NotificationContext';
