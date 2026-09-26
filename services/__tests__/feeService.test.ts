@@ -73,10 +73,10 @@ describe('feeService', () => {
 
       await feeService.getEstimatedFee(200, 'EUR');
 
-      const callArgs = mockAxios.get.mock.calls[0];
+      const callArgs = mockAxios.get.mock.calls[0]!;
       expect(callArgs[0]).toContain('/api/wallet/fees/estimate');
-      expect(callArgs[1].params.amount).toBe(200);
-      expect(callArgs[1].params.currency).toBe('EUR');
+      expect(callArgs[1]!.params.amount).toBe(200);
+      expect(callArgs[1]!.params.currency).toBe('EUR');
     });
 
     it('should handle different amounts', async () => {
@@ -146,8 +146,8 @@ describe('feeService', () => {
 
       await feeService.getEstimatedFee(100);
 
-      const callArgs = mockAxios.get.mock.calls[0];
-      expect(callArgs[1].params.currency).toBe('USD');
+      const callArgs = mockAxios.get.mock.calls[0]!;
+      expect(callArgs[1]!.params.currency).toBe('USD');
     });
 
     it('should handle multiple currencies', async () => {

@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Tooltip,
+  useMapEvents,
+} from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { clusterDrivers } from './clustering';
+import { cellSizeForZoom, clusterDrivers } from './clustering';
 import type { Driver } from '@/types/fleet';
 
 interface FleetMapClientProps {
@@ -12,6 +18,7 @@ interface FleetMapClientProps {
 }
 
 const DEFAULT_CENTER: [number, number] = [9.082, 8.6753]; // Nigeria centroid
+const INITIAL_ZOOM = 6;
 
 function pickCenter(drivers: Driver[]): [number, number] {
   if (drivers.length === 0) return DEFAULT_CENTER;
@@ -29,30 +36,32 @@ function radiusFor(count: number): number {
   return 24;
 }
 
-export default function FleetMapClient({ drivers }: FleetMapClientProps) {
-  const clusters = useMemo(() => clusterDrivers(drivers), [drivers]);
-  const center = useMemo(() => pickCenter(drivers), [drivers]);
+/**
+ * Renders one marker per cluster and re-buckets whenever the map zoom changes.
+ *
+ * Lives inside `MapContainer` because `useMapEvents` needs the Leaflet map from
+ * context. Zooming out widens the clustering grid, so nearby drivers merge into
+ * a single marker instead of overlapping pins.
+ */
+function DriverClusterLayer({ drivers }: FleetMapClientProps) {
+  const [zoomFromEvent, setZoomFromEvent] = useState<number | null>(null);
 
-  // Ensure Leaflet picks up the CSS-loaded marker icons in environments
-  // (Next.js bundles) where the default detection misfires. Without this
-  // the default markers can render broken even when CSS is imported.
-  useEffect(() => {
-    const proto = L.Icon.Default.prototype as { _getIconUrl?: unknown };
-    if (proto._getIconUrl) delete proto._getIconUrl;
-  }, []);
+  const map = useMapEvents({
+    zoomend: () => setZoomFromEvent(map.getZoom()),
+  });
+
+  // Before the first `zoomend` the map may already sit at a zoom other than
+  // INITIAL_ZOOM (a restored view, or `fitBounds`), so read the live value and
+  // let subsequent events take over.
+  const zoom = zoomFromEvent ?? map?.getZoom?.() ?? INITIAL_ZOOM;
+
+  const clusters = useMemo(
+    () => clusterDrivers(drivers, cellSizeForZoom(zoom)),
+    [drivers, zoom],
+  );
 
   return (
-    <MapContainer
-      center={center}
-      zoom={6}
-      scrollWheelZoom
-      style={{ height: '100%', width: '100%' }}
-      aria-label="Fleet map"
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <>
       {clusters.map((cluster) => {
         const count = cluster.drivers.length;
         const isCluster = count > 1;
@@ -78,6 +87,34 @@ export default function FleetMapClient({ drivers }: FleetMapClientProps) {
           </CircleMarker>
         );
       })}
+    </>
+  );
+}
+
+export default function FleetMapClient({ drivers }: FleetMapClientProps) {
+  const center = useMemo(() => pickCenter(drivers), [drivers]);
+
+  // Ensure Leaflet picks up the CSS-loaded marker icons in environments
+  // (Next.js bundles) where the default detection misfires. Without this
+  // the default markers can render broken even when CSS is imported.
+  useEffect(() => {
+    const proto = L.Icon.Default.prototype as { _getIconUrl?: unknown };
+    if (proto._getIconUrl) delete proto._getIconUrl;
+  }, []);
+
+  return (
+    <MapContainer
+      center={center}
+      zoom={INITIAL_ZOOM}
+      scrollWheelZoom
+      style={{ height: '100%', width: '100%' }}
+      aria-label="Fleet map"
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <DriverClusterLayer drivers={drivers} />
     </MapContainer>
   );
 }

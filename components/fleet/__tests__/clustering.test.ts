@@ -1,4 +1,9 @@
-import { clusterDrivers } from '@/components/fleet/clustering';
+import {
+  cellSizeForZoom,
+  clusterDrivers,
+  DEFAULT_CLUSTER_CELL_SIZE,
+  REFERENCE_ZOOM,
+} from '@/components/fleet/clustering';
 import type { Driver } from '@/types/fleet';
 
 function driver(id: string, lat: number, lng: number): Driver {
@@ -55,5 +60,55 @@ describe('clusterDrivers', () => {
     const [cluster] = clusterDrivers(drivers, 0.05);
     expect(cluster.lat).toBeCloseTo(6.52, 3);
     expect(cluster.lng).toBeCloseTo(3.42, 3);
+  });
+});
+
+describe('cellSizeForZoom', () => {
+  it('returns the default cell size at the reference zoom', () => {
+    expect(cellSizeForZoom(REFERENCE_ZOOM)).toBe(DEFAULT_CLUSTER_CELL_SIZE);
+  });
+
+  it('doubles the cell size for every zoom level the user zooms out', () => {
+    expect(cellSizeForZoom(REFERENCE_ZOOM - 1)).toBeCloseTo(
+      DEFAULT_CLUSTER_CELL_SIZE * 2,
+      6,
+    );
+    expect(cellSizeForZoom(REFERENCE_ZOOM - 3)).toBeCloseTo(
+      DEFAULT_CLUSTER_CELL_SIZE * 8,
+      6,
+    );
+  });
+
+  it('halves the cell size for every zoom level the user zooms in', () => {
+    expect(cellSizeForZoom(REFERENCE_ZOOM + 1)).toBeCloseTo(
+      DEFAULT_CLUSTER_CELL_SIZE / 2,
+      6,
+    );
+  });
+
+  it('is monotonically decreasing as zoom increases', () => {
+    const sizes = [0, 3, 6, 9, 12, 18].map(cellSizeForZoom);
+    const sorted = [...sizes].sort((a, b) => b - a);
+    expect(sizes).toEqual(sorted);
+  });
+
+  it('clamps extreme zoom levels to a usable range', () => {
+    expect(cellSizeForZoom(-100)).toBeLessThanOrEqual(45);
+    expect(cellSizeForZoom(-100)).toBeGreaterThan(0);
+    expect(cellSizeForZoom(100)).toBeGreaterThanOrEqual(0.001);
+  });
+
+  it('falls back to the default for a non-finite zoom', () => {
+    expect(cellSizeForZoom(Number.NaN)).toBe(DEFAULT_CLUSTER_CELL_SIZE);
+    expect(cellSizeForZoom(Number.POSITIVE_INFINITY)).toBe(
+      DEFAULT_CLUSTER_CELL_SIZE,
+    );
+  });
+
+  it('merges drivers when zoomed out that stay separate when zoomed in', () => {
+    const drivers = [driver('a', 6.51, 3.41), driver('b', 6.59, 3.49)];
+
+    expect(clusterDrivers(drivers, cellSizeForZoom(13))).toHaveLength(2);
+    expect(clusterDrivers(drivers, cellSizeForZoom(3))).toHaveLength(1);
   });
 });

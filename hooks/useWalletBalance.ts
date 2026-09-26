@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { walletService, WalletBalance, BalanceCheckResult } from '../services/walletService';
 
 interface UseWalletBalanceOptions {
@@ -31,7 +31,6 @@ export function useWalletBalance(options: UseWalletBalanceOptions = {}): UseWall
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
-  const [hasSufficientBalance, setHasSufficientBalance] = useState<boolean>(true);
   const [optimisticBalance, setOptimisticBalance] = useState<WalletBalance | null>(balance);
   
   const mountRef = useRef<boolean>(true);
@@ -47,7 +46,7 @@ export function useWalletBalance(options: UseWalletBalanceOptions = {}): UseWall
   const fetchBalance = useCallback(async (forceRefresh = false): Promise<void> => {
     // Prevent concurrent fetches
     if (fetchInProgressRef.current) return;
-    
+
     try {
       fetchInProgressRef.current = true;
       setIsLoading(true);
@@ -55,29 +54,23 @@ export function useWalletBalance(options: UseWalletBalanceOptions = {}): UseWall
 
       // Use service to fetch balance
       const fetchedBalance = await walletService.fetchBalance(forceRefresh);
-      
+
       if (!mountRef.current) return;
 
       setBalance(fetchedBalance);
       setOptimisticBalance(fetchedBalance);
-      
-      // Update sufficiency based on required amount
-      setHasSufficientBalance(
-        checkSufficiency(fetchedBalance, requiredAmount)
-      );
 
     } catch (err) {
       if (!mountRef.current) return;
-      
+
       const error = err instanceof Error ? err : new Error('Failed to fetch balance');
       setError(error);
-      
+
       // Use cached balance as fallback
       const cached = walletService.getCachedBalance();
       if (cached) {
         setBalance(cached);
         setOptimisticBalance(cached);
-        setHasSufficientBalance(checkSufficiency(cached, requiredAmount));
       }
     } finally {
       if (mountRef.current) {
@@ -85,7 +78,7 @@ export function useWalletBalance(options: UseWalletBalanceOptions = {}): UseWall
       }
       fetchInProgressRef.current = false;
     }
-  }, [requiredAmount, checkSufficiency]);
+  }, []);
 
   // Check balance for a specific amount
   const checkBalance = useCallback(async (amount: number): Promise<BalanceCheckResult> => {
@@ -109,7 +102,6 @@ export function useWalletBalance(options: UseWalletBalanceOptions = {}): UseWall
       if (mountRef.current) {
         setBalance(result.balance);
         setOptimisticBalance(result.balance);
-        setHasSufficientBalance(result.hasSufficientBalance);
       }
       
       return result;
@@ -132,6 +124,7 @@ export function useWalletBalance(options: UseWalletBalanceOptions = {}): UseWall
     // Pre-fetch balance in background if enabled
     if (fetchOnMount) {
       // Start fetching immediately without waiting
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchBalance();
       
       // Also prefetch for future use
@@ -146,14 +139,16 @@ export function useWalletBalance(options: UseWalletBalanceOptions = {}): UseWall
   // Auto-fetch when required amount changes significantly
   useEffect(() => {
     if (autoFetch && requiredAmount > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchBalance();
     }
   }, [requiredAmount, autoFetch, fetchBalance]);
 
-  // Update sufficiency when balance or required amount changes
-  useEffect(() => {
-    setHasSufficientBalance(checkSufficiency(balance, requiredAmount));
-  }, [balance, requiredAmount, checkSufficiency]);
+  // Sufficiency is derived from balance and required amount; no effect needed.
+  const hasSufficientBalance = useMemo(
+    () => checkSufficiency(balance, requiredAmount),
+    [balance, requiredAmount, checkSufficiency]
+  );
 
   // Expose refetch method
   const refetch = useCallback(async (): Promise<void> => {

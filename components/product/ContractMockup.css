@@ -1,0 +1,52 @@
+/* Dark-mode-optimized Solidity/TypeScript token colors for the IDE mockup. */
+.contract-mockup-code .token.comment,
+.contract-mockup-code .token.block-comment,
+.contract-mockup-code .token.prolog,
+.contract-mockup-code .token.doctype,
+.contract-mockup-code .token.cdata {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.contract-mockup-code .token.keyword,
+.contract-mockup-code .token.builtin {
+  color: #c586c0;
+}
+
+.contract-mockup-code .token.string,
+.contract-mockup-code .token.char {
+  color: #ce9178;
+}
+
+.contract-mockup-code .token.number,
+.contract-mockup-code .token.boolean {
+  color: #b5cea8;
+}
+
+.contract-mockup-code .token.function {
+  color: #dcdcaa;
+}
+
+.contract-mockup-code .token.class-name {
+  color: #4ec9b0;
+}
+
+.contract-mockup-code .token.operator,
+.contract-mockup-code .token.punctuation {
+  color: #d4d4d4;
+}
+
+.contract-mockup-code .token.property,
+.contract-mockup-code .token.parameter {
+  color: #9cdcfe;
+}
+
+.contract-mockup-code .token.constant,
+.contract-mockup-code .token.symbol {
+  color: #4fc1ff;
+}
+
+.contract-mockup-code .token.annotation,
+.contract-mockup-code .token.decorator {
+  color: #d7ba7d;
+}

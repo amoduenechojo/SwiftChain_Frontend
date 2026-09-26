@@ -1,0 +1,10 @@
+DARK MODE DESIGN
+
+//Design Dark Mode
+[Figma] Design Dark Mode: Escrow Payment Checkout System (Stellar/USDC)
+[Figma] Design Dark Mode: New Delivery - Cargo Type & Dimensions (Step 2)
+[Figma] Design Dark Mode: New Delivery - Sender & Receiver Details (Step 1)
+[Figma] Design Dark Mode: Global Unified Search (Deliveries, Drivers, Transactions)
+
+
+https://www.figma.com/design/2kP82C0Z8z0X3CncLQmfhB/Stellar-Project-Fig?node-id=227-2&p=f&t=zOzuCCgfIl3q2L5F-0

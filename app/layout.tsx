@@ -8,6 +8,7 @@ import TopLoader from '@/components/ui/TopLoader';
 import CommandPalette from '@/components/ui/CommandPalette';
 import ToastProvider from '@/components/providers/ToastProvider';
 import ModalProvider from '@/components/providers/ModalProvider';
+import { GlobalFooter } from '@/components/shared/GlobalFooter';
 import { themeService } from '@/services/themeService';
 
 export const metadata = {
@@ -50,6 +51,7 @@ export default function RootLayout({
                 <TopLoader />
                 <CommandPalette />
                 {children}
+                <GlobalFooter />
               </ToastProvider>
             </NotificationProvider>
           </Providers>

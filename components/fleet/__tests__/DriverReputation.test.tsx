@@ -31,9 +31,9 @@ describe('DriverReputation', () => {
       error: null,
     });
 
-    render(<DriverReputation driverId="1" standardRating={4.8} />);
+    const { container } = render(<DriverReputation driverId="1" standardRating={4.8} />);
 
-    expect(screen.getByClassName('animate-pulse')).toBeInTheDocument();
+    expect(container.getElementsByClassName('animate-pulse').length).toBeGreaterThan(0);
   });
 
   it('should render both standard and on-chain scores when available', () => {

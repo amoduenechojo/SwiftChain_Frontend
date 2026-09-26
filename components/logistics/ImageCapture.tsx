@@ -96,7 +96,7 @@ export default function ImageCapture() {
 
       {compressedInfo && (
         <p className="text-sm text-gray-600 mb-2">
-          Original: {compressedInfo.name} — {compressedInfo.sizeKB} KB
+          Original: {compressedInfo.name} -- {compressedInfo.sizeKB} KB
         </p>
       )}
 

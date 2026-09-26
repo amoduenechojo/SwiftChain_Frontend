@@ -1,10 +1,15 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EscrowLock } from '@/features/escrow/components';
 import { useEscrowLock } from '@/hooks/useEscrowLock';
 import { useToast } from '@/hooks/useToast';
 
+jest.mock('@/services/escrowService', () => ({
+  escrowService: {
+    lockEscrow: jest.fn(),
+  },
+}));
 jest.mock('@/hooks/useEscrowLock');
 jest.mock('@/hooks/useToast');
 
@@ -19,6 +24,7 @@ describe('EscrowLock', () => {
     mockEscrowLock.mockReturnValue({
       isLoading: false,
       error: null,
+      isSuccess: false,
       escrowId: null,
       transactionHash: null,
       lockEscrow: jest.fn().mockResolvedValue({
@@ -127,7 +133,7 @@ describe('EscrowLock', () => {
     await user.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText('100.50 USDC')).toBeInTheDocument();
+      expect(screen.getAllByText('100.50 USDC')).toHaveLength(2);
     });
   });
 
@@ -194,9 +200,49 @@ describe('EscrowLock', () => {
     });
   });
 
+  it('passes the USDC payment mapping through the confirmation flow', async () => {
+    const user = userEvent.setup();
+    const mockLockEscrow = jest.fn().mockResolvedValue({
+      escrowId: 'escrow-usdc-1',
+      transactionHash: '0xusdc123',
+    });
+
+    mockEscrowLock.mockReturnValue({
+      isLoading: false,
+      isSuccess: false,
+      error: null,
+      escrowId: null,
+      transactionHash: null,
+      lockEscrow: mockLockEscrow,
+      reset: jest.fn(),
+    } as any);
+
+    render(
+      <EscrowLock
+        deliveryId="delivery-usdc"
+        amount={42.75}
+        currency="USDC"
+        walletAddress="GUSDCWALLET"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Lock Payment in Escrow/i }));
+    await user.click(screen.getByRole('button', { name: /Confirm Lock/i }));
+
+    await waitFor(() => {
+      expect(mockLockEscrow).toHaveBeenCalledWith({
+        deliveryId: 'delivery-usdc',
+        amount: 42.75,
+        currency: 'USDC',
+        walletAddress: 'GUSDCWALLET',
+      });
+    });
+  });
+
   it('displays success state with transaction hash', () => {
     mockEscrowLock.mockReturnValue({
       isLoading: false,
+      isSuccess: true,
       error: null,
       escrowId: 'escrow-123',
       transactionHash: '0xabc123def456789',
@@ -240,7 +286,8 @@ describe('EscrowLock', () => {
     expect(screen.getByText('Insufficient funds in wallet')).toBeInTheDocument();
   });
 
-  it('calls onSuccess callback with escrowId and transactionHash', async () => {
+  it('calls onSuccess callback after a successful confirmation', async () => {
+    const user = userEvent.setup();
     const mockOnSuccess = jest.fn();
     const mockLockEscrow = jest.fn().mockResolvedValue({
       escrowId: 'escrow-123',
@@ -250,8 +297,8 @@ describe('EscrowLock', () => {
     mockEscrowLock.mockReturnValue({
       isLoading: false,
       error: null,
-      escrowId: 'escrow-123',
-      transactionHash: '0xabc123',
+      escrowId: null,
+      transactionHash: null,
       lockEscrow: mockLockEscrow,
       reset: jest.fn(),
     } as any);
@@ -266,17 +313,24 @@ describe('EscrowLock', () => {
       />
     );
 
-    expect(mockOnSuccess).toHaveBeenCalledWith('escrow-123', '0xabc123');
+    await user.click(screen.getByRole('button', { name: /Lock Payment in Escrow/i }));
+    await user.click(screen.getByRole('button', { name: /Confirm Lock/i }));
+
+    await waitFor(() => {
+      expect(mockOnSuccess).toHaveBeenCalledWith('escrow-123', '0xabc123');
+    });
   });
 
-  it('calls onError callback with error message', () => {
+  it('calls onError callback when confirmation fails', async () => {
+    const user = userEvent.setup();
     const mockOnError = jest.fn();
+    const mockLockEscrow = jest.fn().mockRejectedValue(new Error('Failed to lock escrow'));
     mockEscrowLock.mockReturnValue({
       isLoading: false,
-      error: 'Failed to lock escrow',
+      error: null,
       escrowId: null,
       transactionHash: null,
-      lockEscrow: jest.fn(),
+      lockEscrow: mockLockEscrow,
       reset: jest.fn(),
     } as any);
 
@@ -290,12 +344,18 @@ describe('EscrowLock', () => {
       />
     );
 
-    expect(mockOnError).toHaveBeenCalledWith('Failed to lock escrow');
+    await user.click(screen.getByRole('button', { name: /Lock Payment in Escrow/i }));
+    await user.click(screen.getByRole('button', { name: /Confirm Lock/i }));
+
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith('Failed to lock escrow');
+    });
   });
 
   it('shows reset button in success state', () => {
     mockEscrowLock.mockReturnValue({
       isLoading: false,
+      isSuccess: true,
       error: null,
       escrowId: 'escrow-123',
       transactionHash: '0xabc123',
@@ -360,6 +420,6 @@ describe('EscrowLock', () => {
       />
     );
 
-    expect(screen.getByText('Wallet status: connected')).toBeInTheDocument();
+    expect(screen.getByText('Wallet connected')).toBeInTheDocument();
   });
 });

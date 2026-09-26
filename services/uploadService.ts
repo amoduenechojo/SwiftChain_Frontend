@@ -21,7 +21,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 /**
- * uploadService — handles file upload with validation.
+ * uploadService -- handles file upload with validation.
  * Supports KYC documents, vehicle licenses, and proof of delivery uploads.
  */
 export const uploadService = {

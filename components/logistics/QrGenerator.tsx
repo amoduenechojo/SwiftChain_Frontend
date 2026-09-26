@@ -11,7 +11,7 @@
  *   QrGenerator → useOfflineQr → { shipmentHandoffService, qrCacheService }
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useOfflineQr } from '@/hooks/useOfflineQr';
 import { ScanConfirmation } from '@/services/qrCacheService';
@@ -90,6 +90,15 @@ export function QrGenerator({
     refresh,
   } = useOfflineQr(deliveryId);
 
+  // Ticks once a minute so the "Expires in Xm" label stays current without
+  // reading the impure Date.now() clock directly during render.
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ── Loading ──────────────────────────────────────────────────────────────
 
   if (isLoading) {
@@ -154,7 +163,7 @@ export function QrGenerator({
     onScanConfirmed?.(confirmation);
   };
 
-  const msLeft = new Date(payload.expiresAt).getTime() - Date.now();
+  const msLeft = new Date(payload.expiresAt).getTime() - now;
   const minutesLeft = Math.max(0, Math.floor(msLeft / 60_000));
 
   return (

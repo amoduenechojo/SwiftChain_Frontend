@@ -2,6 +2,24 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
+/** Cargo categories a driver can filter the marketplace by. */
+export type CargoType =
+  | 'general'
+  | 'fragile'
+  | 'perishable'
+  | 'hazardous'
+  | 'oversized'
+  | 'refrigerated';
+
+export const CARGO_TYPES: CargoType[] = [
+  'general',
+  'fragile',
+  'perishable',
+  'hazardous',
+  'oversized',
+  'refrigerated',
+];
+
 export interface DeliveryJob {
   id: string;
   pickupAddress: string;
@@ -10,6 +28,8 @@ export interface DeliveryJob {
   estimatedDistance: number; // km
   estimatedEarnings: number; // XLM
   region: string;
+  /** Optional until the backend backfills historical jobs. */
+  cargoType?: CargoType;
   createdAt: string;
   status: 'unassigned' | 'assigned' | 'in_progress' | 'delivered';
 }

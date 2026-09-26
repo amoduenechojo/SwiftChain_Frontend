@@ -175,12 +175,11 @@ export function HandoffQR({
       {/* QR Code Container */}
       <div className="p-4 bg-white rounded-lg border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
         <div className="bg-white p-2 rounded">
-          <QRCode
+          <QRCodeCanvas
             value={qrQuery.data.qrData}
             size={size}
             level="H"
             includeMargin={true}
-            renderAs="canvas"
             data-testid="handoff-qr-code"
           />
         </div>

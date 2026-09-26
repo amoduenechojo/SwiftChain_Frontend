@@ -46,12 +46,12 @@ function ReputationModal({ onClose }: { onClose: () => void }) {
             <h4 className="font-semibold text-gray-800">On-Chain Score (🛡️)</h4>
             <p>
               This is a tokenized score recorded directly on the Stellar
-              blockchain. Drivers earn these "Reputation Tokens" by successfully
+              blockchain. Drivers earn these &ldquo;Reputation Tokens&rdquo; by successfully
               completing escrow-secured deliveries.
             </p>
             <p className="mt-2">
               An on-chain score is a verifiable, tamper-proof record of a
-              driver's history within the SwiftChain ecosystem, representing a
+              driver&apos;s history within the SwiftChain ecosystem, representing a
               higher level of trust.
             </p>
           </div>
@@ -97,10 +97,11 @@ export function DriverReputation({
         <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200" />
       ) : onChainScore && onChainScore > 0 ? (
         <div
-          className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700"
+          className="flex items-center gap-1.5 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700"
           title="Verified On-Chain Reputation Score"
         >
           <ShieldCheckIcon className="h-3.5 w-3.5 text-blue-500" />
+          <span className="font-semibold uppercase tracking-wide">Verified On-Chain</span>
           <span>{onChainScore.toLocaleString()}</span>
         </div>
       ) : null}

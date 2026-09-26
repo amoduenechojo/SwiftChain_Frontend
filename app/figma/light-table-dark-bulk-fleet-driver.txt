@@ -1,0 +1,10 @@
+DARK MODE DESIGN
+
+//Design Dark Mode
+Design Light Mode: Cross-Border Transaction History (Table View)
+Design Dark Mode: Wholesale & Retail Bulk Shipment Import System
+Design Dark Mode: Fleet Manager Vehicle Tracking (Live Map View)
+Design Dark Mode: Driver Job Marketplace with Advanced Search
+
+//Design Dark Mode reference
+https://www.figma.com/design/2kP82C0Z8z0X3CncLQmfhB/Stellar-Project-Fig?node-id=227-2&p=f&t=zOzuCCgfIl3q2L5F-0

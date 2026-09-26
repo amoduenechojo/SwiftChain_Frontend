@@ -1,0 +1,10 @@
+DARK MODE DESIGN
+
+//Design Dark Mode
+- Cargo Insurance & Liability Protection Selection
+- Cross-Border Transaction History — Grid View
+- Cross-Border Transaction History — List View
+- Live Currency Converter & Exchange Rates Widget
+
+//Reference to the Figma Design Platform
+https://www.figma.com/design/2kP82C0Z8z0X3CncLQmfhB/Stellar-Project-Fig?node-id=227-2&p=f&t=zOzuCCgfIl3q2L5F-0

@@ -5,6 +5,7 @@ import { useRequireRole } from '@/hooks/useRequireRole';
 import { FleetMap } from '@/components/fleet/FleetMap';
 import { DriverList } from '@/components/fleet/DriverList';
 import { FleetStats } from '@/components/fleet/FleetStats';
+import { FleetPartnerDirectory } from '@/components/fleet/FleetPartnerDirectory';
 
 export default function FleetDashboardPage() {
   const { isAuthorized } = useRequireRole('Fleet Operator');
@@ -58,6 +59,7 @@ export default function FleetDashboardPage() {
         <>
           {summary ? <FleetStats summary={summary} /> : null}
           <FleetMap drivers={drivers} />
+          <FleetPartnerDirectory partners={drivers} isLoading={isLoading} />
           <DriverList drivers={drivers} />
         </>
       )}

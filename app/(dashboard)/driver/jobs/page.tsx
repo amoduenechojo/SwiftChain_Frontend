@@ -5,6 +5,8 @@ import { Briefcase, RefreshCw } from 'lucide-react';
 import { useDriverJobs } from '@/hooks/useDriverJobs';
 import { JobCard } from '@/features/driver/components/JobCard';
 import { AcceptJobModal } from '@/features/driver/components/AcceptJobModal';
+import { JobFilters } from '@/features/driver/components/JobFilters';
+import { useJobFilters } from '@/hooks/useJobFilters';
 import { DeliveryJob } from '@/services/driverJobService';
 
 /**
@@ -16,6 +18,17 @@ import { DeliveryJob } from '@/services/driverJobService';
 export default function DriverJobBoardPage() {
   const { jobs, isLoading, isAccepting, error, refreshJobs, acceptJob } =
     useDriverJobs();
+
+  const {
+    filters,
+    filteredJobs,
+    hasActiveFilters,
+    availableLocations,
+    setQuery,
+    setLocation,
+    setCargoType,
+    resetFilters,
+  } = useJobFilters(jobs);
 
   // The job currently being confirmed — null means modal is closed.
   const [pendingJob, setPendingJob] = useState<DeliveryJob | null>(null);
@@ -63,6 +76,22 @@ export default function DriverJobBoardPage() {
           Refresh
         </button>
       </div>
+
+      {/* Advanced search filters */}
+      {!isLoading && !error && jobs.length > 0 && (
+        <div className="mt-6">
+          <JobFilters
+            filters={filters}
+            hasActiveFilters={hasActiveFilters}
+            availableLocations={availableLocations}
+            resultCount={filteredJobs.length}
+            onQueryChange={setQuery}
+            onLocationChange={setLocation}
+            onCargoTypeChange={setCargoType}
+            onResetFilters={resetFilters}
+          />
+        </div>
+      )}
 
       {/* Stats bar */}
       {!isLoading && !error && (
@@ -114,10 +143,27 @@ export default function DriverJobBoardPage() {
         </div>
       )}
 
+      {/* No results for the current filters */}
+      {!isLoading && !error && jobs.length > 0 && filteredJobs.length === 0 && (
+        <div className="mt-12 flex flex-col items-center gap-3 text-center">
+          <Briefcase className="h-12 w-12 text-gray-300 dark:text-gray-600" />
+          <p className="text-base font-medium text-gray-500 dark:text-gray-400">
+            No jobs match your filters
+          </p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
       {/* Job grid */}
-      {!isLoading && !error && jobs.length > 0 && (
+      {!isLoading && !error && filteredJobs.length > 0 && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {jobs.map((job) => (
+          {filteredJobs.map((job) => (
             <JobCard
               key={job.id}
               job={job}

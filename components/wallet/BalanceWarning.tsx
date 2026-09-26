@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWalletBalance } from '../../hooks/useWalletBalance';
 import './BalanceWarning.css';
 
@@ -7,22 +7,30 @@ interface BalanceWarningProps {
   onClose?: () => void;
   className?: string;
   /**
-   * Whether to reserve space for the warning banner
-   * Prevents layout jumping
+   * Reserve a fixed DOM slot so the surrounding layout never jumps when the
+   * banner mounts or unmounts.
    */
   reserveSpace?: boolean;
   /**
-   * Show warning immediately using cached balance
-   * If true, shows warning instantly without waiting for API
+   * Use the optimistic/cached balance to decide visibility on the first render.
+   * When true, a pre-fetched low balance is shown instantly (no wait for the
+   * network round-trip).
    */
   showImmediately?: boolean;
 }
 
-interface BalanceWarningState {
-  isVisible: boolean;
-  shouldAnimateIn: boolean;
-}
-
+/**
+ * BalanceWarning — insufficient-balance banner.
+ *
+ * Layered Architecture:
+ *   BalanceWarning (Component) → useWalletBalance (Hook) → walletService (Service)
+ *
+ * Visibility is DERIVED during render from the balance the hook exposes — it is
+ * never stored in state and never toggled by effects. That removes the race that
+ * caused the banner to flicker on modal load, and lets a pre-fetched low balance
+ * paint on the very first frame. The only local state is the user's explicit
+ * dismissal, which is a genuine user action and not part of the data flow.
+ */
 export const BalanceWarning: React.FC<BalanceWarningProps> = ({
   requiredAmount,
   onClose,
@@ -30,197 +38,123 @@ export const BalanceWarning: React.FC<BalanceWarningProps> = ({
   reserveSpace = true,
   showImmediately = true,
 }) => {
-  // Use the hook with auto-fetch and optimistic state
-  const { 
-    balance, 
-    isLoading, 
-    hasSufficientBalance, 
-    optimisticBalance,
-    checkBalance,
-    refetch,
-  } = useWalletBalance({
+  // The hook owns the data. It auto-fetches on mount AND seeds `balance` /
+  // `optimisticBalance` synchronously from the service cache, so a low balance
+  // that was already fetched is available on the very first render.
+  const { balance, isLoading, optimisticBalance, refetch } = useWalletBalance({
     requiredAmount,
     autoFetch: true,
     fetchOnMount: true,
   });
 
-  const [state, setState] = useState<BalanceWarningState>({
-    isVisible: false,
-    shouldAnimateIn: false,
-  });
-
+  // The ONLY piece of local state: has the user explicitly dismissed the banner?
+  // Everything else is derived, so there is nothing left to race.
   const [dismissed, setDismissed] = useState<boolean>(false);
   const warningRef = useRef<HTMLDivElement>(null);
-  const animationTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Determine if warning should be visible
-  const shouldShowWarning = useRef<boolean>(false);
+  // ---- Derived visibility (single source of truth, computed every render) ----
+  //
+  // Prefer the optimistic/cached balance for an instant decision when
+  // `showImmediately` is set; otherwise use the confirmed balance. While the
+  // very first fetch is still in flight and we have no balance at all, we stay
+  // hidden (but keep the reserved space) so nothing flickers in and back out.
+  const effectiveBalance =
+    (showImmediately ? optimisticBalance : null) ?? balance;
 
-  useEffect(() => {
-    // If user dismissed, don't show
-    if (dismissed) {
-      setState(prev => ({ ...prev, isVisible: false }));
-      return;
-    }
+  // `!= null` guards against both null and an undefined balance (e.g. a fetch
+  // that resolved without cached data), so the render below is always safe.
+  const isInsufficient =
+    effectiveBalance != null && effectiveBalance.available < requiredAmount;
 
-    // Check if balance is insufficient
-    // Use optimistic balance for instant display
-    let isInsufficient = false;
-
-    if (showImmediately && optimisticBalance) {
-      // Check against optimistic balance (cached)
-      isInsufficient = optimisticBalance.available < requiredAmount;
-    } else if (balance) {
-      // Check against actual balance
-      isInsufficient = balance.available < requiredAmount;
-    } else {
-      // No balance data yet - default to false
-      isInsufficient = false;
-    }
-
-    // Update shouldShowWarning ref
-    shouldShowWarning.current = isInsufficient;
-
-    // Handle visibility with animation
-    if (isInsufficient) {
-      // Show warning with animation
-      setState(prev => ({
-        isVisible: true,
-        shouldAnimateIn: true,
-      }));
-
-      // Reset animation flag after animation completes
-      if (animationTimerRef.current) {
-        clearTimeout(animationTimerRef.current);
-      }
-      animationTimerRef.current = setTimeout(() => {
-        setState(prev => ({
-          ...prev,
-          shouldAnimateIn: false,
-        }));
-      }, 300); // Match animation duration
-
-    } else if (!isInsufficient && !isLoading) {
-      // Hide warning with animation
-      setState(prev => ({
-        isVisible: false,
-        shouldAnimateIn: false,
-      }));
-    }
-
-    // Cleanup timer
-    return () => {
-      if (animationTimerRef.current) {
-        clearTimeout(animationTimerRef.current);
-      }
-    };
-  }, [balance, optimisticBalance, isLoading, requiredAmount, dismissed, showImmediately]);
-
-  // Re-check balance when required amount changes
-  useEffect(() => {
-    if (requiredAmount > 0) {
-      checkBalance(requiredAmount);
-    }
-  }, [requiredAmount, checkBalance]);
-
-  // If warning is visible but we later find balance is sufficient, hide it
-  useEffect(() => {
-    if (hasSufficientBalance && state.isVisible) {
-      setState(prev => ({
-        ...prev,
-        isVisible: false,
-        shouldAnimateIn: false,
-      }));
-    }
-  }, [hasSufficientBalance, state.isVisible]);
+  const isVisible = isInsufficient && !dismissed;
 
   const handleClose = () => {
     setDismissed(true);
-    if (onClose) {
-      onClose();
-    }
+    onClose?.();
   };
 
   const handleRetry = () => {
+    // Re-open (in case it was dismissed) and force a fresh fetch.
     setDismissed(false);
     refetch();
   };
 
-  // If not visible and not reserving space, don't render anything
-  if (!state.isVisible && !reserveSpace) {
+  // If there is nothing to show and we are not holding space, render nothing.
+  if (!isVisible && !reserveSpace) {
     return null;
   }
 
-  // Reserve space in DOM to prevent layout jumping
-  const containerStyle = reserveSpace ? {
-    minHeight: state.isVisible ? 'auto' : '60px', // Reserve space even when hidden
-    transition: 'min-height 0.3s ease',
-  } : {};
+  // Reserve a stable slot so mounting/unmounting the banner never shifts layout.
+  const containerStyle: React.CSSProperties = reserveSpace
+    ? { minHeight: '60px' }
+    : {};
 
-  // Determine warning variant based on severity
-  const isLowBalance = balance && balance.available < requiredAmount * 0.5;
+  // Severity variant, based on the balance we are actually displaying.
+  const isLowBalance =
+    !!effectiveBalance && effectiveBalance.available < requiredAmount * 0.5;
   const variant = isLowBalance ? 'danger' : 'warning';
 
-  const getWarningMessage = () => {
-    if (!balance) return 'Checking balance...';
-    
-    const shortfall = (requiredAmount - balance.available).toFixed(2);
-    const currency = balance.currency || 'USD';
-    
-    if (balance.available === 0) {
-      return `Insufficient balance. Please add funds to your wallet.`;
+  const getWarningMessage = (): string => {
+    if (!effectiveBalance) return 'Checking balance...';
+
+    const shortfall = (requiredAmount - effectiveBalance.available).toFixed(2);
+    const currency = effectiveBalance.currency || 'USD';
+
+    if (effectiveBalance.available === 0) {
+      return 'Insufficient balance. Please add funds to your wallet.';
     }
-    
+
     return `Insufficient balance. You need ${currency} ${shortfall} more to complete this transaction.`;
   };
 
   return (
-    <div 
+    <div
       className={`balance-warning-container ${className}`}
       style={containerStyle}
       role="alert"
       aria-live="polite"
     >
-      {state.isVisible && (
-        <div 
+      {isVisible && (
+        <div
           ref={warningRef}
-          className={`balance-warning balance-warning--${variant} ${
-            state.shouldAnimateIn ? 'balance-warning--entering' : ''
-          }`}
+          className={`balance-warning balance-warning--${variant}`}
           data-testid="balance-warning"
         >
           <div className="balance-warning__icon">
-            {isLoading ? '⏳' : isLowBalance ? '⚠️' : '💡'}
+            {isLowBalance ? '⚠️' : '💡'}
           </div>
-          
+
           <div className="balance-warning__content">
             <h4 className="balance-warning__title">
-              {isLoading ? 'Checking balance...' : isLowBalance ? 'Critical: Insufficient Balance' : 'Insufficient Balance'}
+              {isLowBalance ? 'Critical: Insufficient Balance' : 'Insufficient Balance'}
             </h4>
-            
-            <p className="balance-warning__message">
-              {isLoading ? 'Verifying your wallet balance...' : getWarningMessage()}
-            </p>
-            
-            {!isLoading && balance && (
+
+            <p className="balance-warning__message">{getWarningMessage()}</p>
+
+            {effectiveBalance && (
               <div className="balance-warning__details">
-                <span>Available: {balance.currency} {balance.available.toFixed(2)}</span>
-                <span>Required: {balance.currency} {requiredAmount.toFixed(2)}</span>
+                <span>
+                  Available: {effectiveBalance.currency} {effectiveBalance.available.toFixed(2)}
+                </span>
+                <span>
+                  Required: {effectiveBalance.currency} {requiredAmount.toFixed(2)}
+                </span>
               </div>
             )}
           </div>
-          
+
           <div className="balance-warning__actions">
-            <button 
+            <button
               className="balance-warning__btn balance-warning__btn--retry"
               onClick={handleRetry}
               aria-label="Retry balance check"
+              disabled={isLoading}
             >
               <span>🔄</span> Retry
             </button>
-            
+
             {onClose && (
-              <button 
+              <button
                 className="balance-warning__btn balance-warning__btn--close"
                 onClick={handleClose}
                 aria-label="Close warning"
@@ -231,9 +165,9 @@ export const BalanceWarning: React.FC<BalanceWarningProps> = ({
           </div>
         </div>
       )}
-      
-      {/* Hidden spacer to maintain layout when warning is hidden */}
-      {reserveSpace && !state.isVisible && (
+
+      {/* Hidden spacer keeps the reserved slot filled while the banner is hidden. */}
+      {reserveSpace && !isVisible && (
         <div className="balance-warning__spacer" aria-hidden="true" />
       )}
     </div>

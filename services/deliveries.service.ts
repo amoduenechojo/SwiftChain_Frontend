@@ -35,5 +35,10 @@ export const deliveriesService = {
   getDeliveryById: async (id: string): Promise<Delivery> => {
     const { data } = await apiClient.get<Delivery>(`/deliveries/${id}`);
     return data;
+  },
+
+  createDelivery: async (payload: CreateDeliveryPayload): Promise<Delivery> => {
+    const { data } = await apiClient.post<Delivery>('/deliveries', payload);
+    return data;
   }
 };

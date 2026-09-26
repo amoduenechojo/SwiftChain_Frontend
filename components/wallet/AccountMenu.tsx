@@ -57,10 +57,17 @@ export function AccountMenu() {
         />
       </MenuButton>
 
-      {/* Dropdown panel */}
+      {/* Dropdown panel.
+
+          `anchor` renders MenuItems into a portal at document.body, so it
+          escapes the header's stacking context. The z-index must still sit
+          above Leaflet's control panes (`.leaflet-top`/`.leaflet-bottom` ship
+          with z-index:1000), which otherwise clip the menu on map pages whose
+          container doesn't trap its own stacking context. `z-[9999]` matches
+          the app's top-layer convention (see OfflineBanner) and clears 1000. */}
       <MenuItems
         anchor="bottom end"
-        className="z-50 mt-2 w-64 origin-top-right rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:ring-white/10"
+        className="z-[9999] mt-2 w-64 origin-top-right rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:ring-white/10"
       >
         {/* Full address header — not a focusable menu item */}
         <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-700">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { QrScanner } from '../../../components/logistics/QrScanner';
 import { qrScannerService } from '../../../services/qrScannerService';
@@ -77,16 +77,73 @@ describe('QrScanner - Camera Permissions', () => {
       getTracks: () => [{ stop: jest.fn() }],
     };
     (navigator.mediaDevices.getUserMedia as jest.Mock).mockResolvedValueOnce(mockStream);
-    
+
     renderWithClient(<QrScanner />);
-    
+
     // Wait for the video element to be visible/active
     await waitFor(() => {
       const video = screen.getByTestId('qr-video-element');
       expect(video).toHaveClass('opacity-100');
     });
-    
+
     // Ensure no error message is shown
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('renders a distinct "No camera device found" fallback for NotFoundError', async () => {
+    const noDeviceError = new Error('Requested device not found');
+    noDeviceError.name = 'NotFoundError';
+    (navigator.mediaDevices.getUserMedia as jest.Mock).mockRejectedValueOnce(noDeviceError);
+
+    renderWithClient(<QrScanner />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No camera device found\./i)).toBeInTheDocument();
+    });
+
+    // This must be distinguishable from the permission-denied fallback
+    expect(screen.queryByText(/Camera Permission Denied/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  it('renders a generic failure fallback for unexpected getUserMedia errors', async () => {
+    const unexpectedError = new Error('Something went wrong');
+    unexpectedError.name = 'AbortError';
+    (navigator.mediaDevices.getUserMedia as jest.Mock).mockRejectedValueOnce(unexpectedError);
+
+    renderWithClient(<QrScanner />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to access camera\./i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  it('recovers and initializes the camera after retrying from a permission-denied state', async () => {
+    const permissionDeniedError = new Error('Permission denied');
+    permissionDeniedError.name = 'NotAllowedError';
+    (navigator.mediaDevices.getUserMedia as jest.Mock).mockRejectedValueOnce(permissionDeniedError);
+
+    renderWithClient(<QrScanner />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Camera Permission Denied/i)).toBeInTheDocument();
+    });
+
+    const mockStream = {
+      getTracks: () => [{ stop: jest.fn() }],
+    };
+    (navigator.mediaDevices.getUserMedia as jest.Mock).mockResolvedValueOnce(mockStream);
+
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+
+    await waitFor(() => {
+      const video = screen.getByTestId('qr-video-element');
+      expect(video).toHaveClass('opacity-100');
+    });
+
+    // The permission-denied fallback must clear once the camera recovers
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

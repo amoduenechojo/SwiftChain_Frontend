@@ -9,7 +9,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PaymentLock } from '@/components/escrow/PaymentLock';
-import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import {
+  useCurrencyConversion,
+  type CurrencyConversionResult,
+} from '@/hooks/useCurrencyConversion';
 
 // ---------------------------------------------------------------------------
 // Mock the hook layer
@@ -20,16 +23,16 @@ const mockUseCurrencyConversion = useCurrencyConversion as jest.MockedFunction<
   typeof useCurrencyConversion
 >;
 
-const DEFAULT_HOOK_STATE = {
+const DEFAULT_HOOK_STATE: CurrencyConversionResult = {
   ngnAmount: '',
   ngnRaw: null,
   rate: null,
   rateUpdatedAt: null,
   isLoading: false,
   isError: false,
-} as const;
+};
 
-const mockConversion = (overrides: Partial<typeof DEFAULT_HOOK_STATE> = {}) => {
+const mockConversion = (overrides: Partial<CurrencyConversionResult> = {}) => {
   mockUseCurrencyConversion.mockReturnValue({
     ...DEFAULT_HOOK_STATE,
     ...overrides,

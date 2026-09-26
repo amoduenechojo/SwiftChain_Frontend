@@ -1,0 +1,11 @@
+DARK MODE DESIGN
+
+//Design Dark Mode Issue Title
+[Figma] Design Dark Mode: Customer Active Deliveries (Table Views)
+[Figma] Design Dark Mode: Customer Active Deliveries (Grid Views)
+[Figma] Design Dark Mode: Activity Center Page
+[Figma] Design Dark Mode: Customer Active Deliveries (List Views)
+
+//Design Dark Mode
+https://www.figma.com/design/2kP82C0Z8z0X3CncLQmfhB/Stellar-Project-Fig?node-id=227-2&p=f&t=zOzuCCgfIl3q2L5F-0
+

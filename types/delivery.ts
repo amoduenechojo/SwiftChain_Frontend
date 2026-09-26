@@ -1,3 +1,5 @@
+import type { DeliveryStatus } from './filters';
+
 export interface DriverInfo {
   id: string;
   name: string;

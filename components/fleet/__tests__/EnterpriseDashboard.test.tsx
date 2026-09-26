@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { EnterpriseDashboard } from '../EnterpriseDashboard';
 import { useFleet } from '@/hooks/useFleet';
 import type { Driver, FleetSummary } from '@/types/fleet';
@@ -75,10 +75,10 @@ describe('EnterpriseDashboard', () => {
       refetch: jest.fn(),
     });
 
-    render(<EnterpriseDashboard />);
+    const { container } = render(<EnterpriseDashboard />);
 
     // Check for summary bar skeleton
-    expect(screen.getAllByClassName('animate-pulse').length).toBeGreaterThan(0);
+    expect(container.getElementsByClassName('animate-pulse').length).toBeGreaterThan(0);
 
     // Check for table skeleton
     expect(screen.getByLabelText('Loading fleet data')).toBeInTheDocument();
@@ -138,8 +138,9 @@ describe('EnterpriseDashboard', () => {
     render(<EnterpriseDashboard />);
 
     // Check summary bar
-    expect(screen.getByText('Total')).toBeInTheDocument();
-    expect(screen.getByText(mockSummary.totalDrivers)).toBeInTheDocument();
+    const totalCard = screen.getByText('Total').closest('div');
+    expect(totalCard).not.toBeNull();
+    expect(within(totalCard as HTMLElement).getByText(String(mockSummary.totalDrivers))).toBeInTheDocument();
 
     // Check table header and virtualized rows
     expect(screen.getByText('John Doe')).toBeInTheDocument();

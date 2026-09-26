@@ -9,7 +9,7 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 // Mock browser-image-compression
 jest.mock('browser-image-compression');
 const mockedImageCompression =
-  imageCompression as jest.Mocked<typeof imageCompression>;
+  imageCompression as jest.MockedFunction<typeof imageCompression>;
 
 describe('proofService', () => {
   beforeEach(() => {

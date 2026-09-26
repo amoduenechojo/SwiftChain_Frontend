@@ -1,0 +1,7 @@
+Design Light Mode: Dashboard Overview Page 
+Design Light Mode: Customer Active Deliveries (Table Views) 
+Design Light Mode: Customer Active Deliveries (List Views) 
+Design Light Mode: Customer Active Deliveries (Grid Views)
+
+
+https://www.figma.com/design/2kP82C0Z8z0X3CncLQmfhB/Stellar-Project-Fig?node-id=227-2&p=f&t=LhlzEJ7fINwVaUuh-0

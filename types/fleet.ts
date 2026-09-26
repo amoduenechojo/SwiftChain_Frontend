@@ -17,6 +17,7 @@ export interface Driver {
   activeDeliveries: number;
   completedDeliveries: number;
   location: DriverLocation;
+  trustScore?: number;
 }
 
 export interface FleetSummary {

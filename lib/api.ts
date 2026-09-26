@@ -26,7 +26,7 @@ api.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error),
 );
 
-// Handle 401 Unauthorized — clear stored token and redirect to login
+// Handle 401 Unauthorized -- clear stored token and redirect to login
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {

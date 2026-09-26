@@ -1,44 +1,66 @@
 import imageCompression from 'browser-image-compression';
 
 /**
- * imageCompressionService — wraps `browser-image-compression` to provide
- * a simple, retrying compression API that targets a maximum size in KB.
+ * imageCompressionService -- wraps `browser-image-compression` to provide
+ * a retrying compression API that strictly guarantees a maximum size in KB.
+ *
+ * Strategy: the library's own `maxSizeMB` option is a best-effort target,
+ * not a guarantee, so this layers two escalating fallbacks on top of it:
+ *   1. Progressive JPEG quality reduction (0.8 -> 0.2).
+ *   2. Progressive max-dimension downscaling (1280 -> 320), re-running the
+ *      quality sweep at each dimension step.
+ * This keeps the output strictly under the target for realistic delivery
+ * proof photos while preserving as much readability as possible.
  */
+
+const QUALITY_STEPS = [0.8, 0.65, 0.5, 0.35, 0.2];
+const DIMENSION_STEPS = [1280, 1024, 800, 640, 480, 320];
+
+function toFile(blob: Blob, original: File): File {
+  const mime = (blob as any).type || original.type;
+  return new File([blob], original.name, { type: mime });
+}
+
 export const imageCompressionService = {
   /**
    * Compress a File to target size (KB). Returns a new File instance.
+   * Throws if the target cannot be met even at the smallest acceptable
+   * dimension/quality, so callers never silently upload an oversized file.
    */
   async compressImage(file: File, targetSizeKB = 500): Promise<File> {
-    // Initial options for the library. The library will attempt to respect
-    // maxSizeMB but we also fall back to progressive quality reduction.
-    const optionsBase: Record<string, any> = {
-      maxSizeMB: targetSizeKB / 1024,
-      maxWidthOrHeight: 1280,
-      useWebWorker: true,
-    };
+    const targetBytes = targetSizeKB * 1024;
 
-    // First attempt using the library's built-in algorithm.
-    let compressedBlob: Blob = await imageCompression(file as any, optionsBase);
+    let bestBlob: Blob | null = null;
 
-    // If still too large, progressively reduce quality until under target
-    // or until a reasonable lower bound is reached.
-    if (compressedBlob.size > targetSizeKB * 1024) {
-      let quality = 0.8;
-      while (compressedBlob.size > targetSizeKB * 1024 && quality >= 0.3) {
-        const opts = { ...optionsBase, initialQuality: quality };
-        // re-run compression with lower quality
-        // eslint-disable-next-line no-await-in-loop
-        compressedBlob = await imageCompression(file as any, opts);
-        quality -= 0.15;
+    for (const maxWidthOrHeight of DIMENSION_STEPS) {
+      for (const initialQuality of QUALITY_STEPS) {
+        const options: Record<string, any> = {
+          maxSizeMB: targetSizeKB / 1024,
+          maxWidthOrHeight,
+          initialQuality,
+          useWebWorker: true,
+        };
+
+        const blob: Blob = await imageCompression(file as any, options);
+
+        if (!bestBlob || blob.size < bestBlob.size) {
+          bestBlob = blob;
+        }
+
+        if (blob.size <= targetBytes) {
+          return toFile(blob, file);
+        }
       }
     }
 
-    // Convert blob back to File for downstream upload convenience.
-    const mime = (compressedBlob as any).type || file.type;
-    const compressedFile = new File([compressedBlob], file.name, {
-      type: mime,
-    });
+    if (bestBlob) {
+      throw new Error(
+        `Unable to compress "${file.name}" below ${targetSizeKB}KB (smallest achievable was ${(
+          bestBlob.size / 1024
+        ).toFixed(2)}KB). Try a lower-resolution source image.`
+      );
+    }
 
-    return compressedFile;
+    throw new Error(`Failed to compress "${file.name}".`);
   },
 };

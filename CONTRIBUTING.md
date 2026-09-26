@@ -86,6 +86,7 @@ When looking for something to work on, please check the GitHub Issues tab. We re
 
 ## License & Copyright
 
+
 By contributing, you agree that your contributions will be licensed under the **MIT License**, same as the project.
 
 ++++++++++++++++++++++++++++++++++
